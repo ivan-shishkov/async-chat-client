@@ -1,10 +1,31 @@
 import asyncio
 import socket
+import datetime
 from contextlib import asynccontextmanager
 
+from aiofile import AIOFile
 import configargparse
 
 import gui
+
+
+def add_datetime_info(text):
+    now = datetime.datetime.now()
+    return f'[{now.strftime("%d.%m.%Y %H:%M")}] {text}'
+
+
+async def write_to_file(file_object, text, enable_adding_datetime_info=True):
+    text = add_datetime_info(text) if enable_adding_datetime_info else text
+
+    await file_object.write(text)
+    await file_object.fsync()
+
+
+async def save_messages(output_filepath, queue):
+    async with AIOFile(output_filepath, 'a') as file_object:
+        while True:
+            message = await queue.get()
+            await write_to_file(file_object=file_object, text=message)
 
 
 @asynccontextmanager
@@ -17,7 +38,7 @@ async def open_connection(host, port):
 
 
 async def read_messages(
-        host, port, queue,
+        host, port, displayed_messages_queue, written_to_file_messages_queue,
         connection_attempts_count_without_timeout=2,
         timeout_between_connection_attempts=3):
     current_connection_attempt = 0
@@ -29,19 +50,26 @@ async def read_messages(
             async with open_connection(host=host, port=port) as (reader, writer):
                 current_connection_attempt = 0
 
-                queue.put_nowait('Connection established')
+                displayed_messages_queue.put_nowait('Connection established')
+                written_to_file_messages_queue.put_nowait('Connection established\n')
 
                 while True:
                     message = await reader.readline()
-                    queue.put_nowait(f'{message.decode().strip()}')
+                    displayed_messages_queue.put_nowait(f'{message.decode().strip()}')
+                    written_to_file_messages_queue.put_nowait(f'{message.decode()}')
 
         except (socket.gaierror, ConnectionRefusedError, ConnectionResetError):
             if current_connection_attempt < connection_attempts_count_without_timeout:
-                queue.put_nowait('No connection. Retrying.')
+                displayed_messages_queue.put_nowait('No connection. Retrying.')
+                written_to_file_messages_queue.put_nowait('No connection. Retrying.\n')
             else:
-                queue.put_nowait(
+                displayed_messages_queue.put_nowait(
                     f'No connection. '
                     f'Retrying in {timeout_between_connection_attempts} sec.',
+                )
+                written_to_file_messages_queue.put_nowait(
+                    f'No connection. '
+                    f'Retrying in {timeout_between_connection_attempts} sec.\n',
                 )
                 await asyncio.sleep(timeout_between_connection_attempts)
 
@@ -99,21 +127,28 @@ async def main():
 
     chat_host = command_line_arguments.host
     chat_read_port = command_line_arguments.read_port
+    output_filepath = command_line_arguments.output
 
-    messages_queue = asyncio.Queue()
+    displayed_messages_queue = asyncio.Queue()
+    written_to_file_messages_queue = asyncio.Queue()
     sending_queue = asyncio.Queue()
     status_updates_queue = asyncio.Queue()
 
     await asyncio.gather(
         gui.draw(
-            messages_queue=messages_queue,
+            messages_queue=displayed_messages_queue,
             sending_queue=sending_queue,
             status_updates_queue=status_updates_queue,
         ),
         read_messages(
             host=chat_host,
             port=chat_read_port,
-            queue=messages_queue,
+            displayed_messages_queue=displayed_messages_queue,
+            written_to_file_messages_queue=written_to_file_messages_queue,
+        ),
+        save_messages(
+            output_filepath=output_filepath,
+            queue=written_to_file_messages_queue,
         ),
     )
 
