@@ -1,6 +1,13 @@
 import asyncio
+import time
 
 import gui
+
+
+async def generate_messages(queue):
+    while True:
+        queue.put_nowait(f'Ping {int(time.time())}')
+        await asyncio.sleep(1)
 
 
 async def main():
@@ -8,7 +15,10 @@ async def main():
     sending_queue = asyncio.Queue()
     status_updates_queue = asyncio.Queue()
 
-    await gui.draw(messages_queue, sending_queue, status_updates_queue)
+    await asyncio.gather(
+        gui.draw(messages_queue, sending_queue, status_updates_queue),
+        generate_messages(messages_queue),
+    )
 
 
 if __name__ == '__main__':
