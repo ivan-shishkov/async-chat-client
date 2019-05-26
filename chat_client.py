@@ -1,6 +1,7 @@
 import asyncio
 import socket
 import datetime
+import logging
 from contextlib import asynccontextmanager
 
 from aiofile import AIOFile
@@ -74,6 +75,12 @@ async def read_messages(
                 await asyncio.sleep(timeout_between_connection_attempts)
 
 
+async def send_messages(host, port, queue):
+    while True:
+        message = await queue.get()
+        logging.debug(f'User wrote: {message}')
+
+
 def get_command_line_arguments():
     parser = configargparse.ArgumentParser()
 
@@ -127,7 +134,10 @@ async def main():
 
     chat_host = command_line_arguments.host
     chat_read_port = command_line_arguments.read_port
+    chat_write_port = command_line_arguments.write_port
     output_filepath = command_line_arguments.output
+
+    logging.basicConfig(level=logging.DEBUG)
 
     displayed_messages_queue = asyncio.Queue()
     written_to_file_messages_queue = asyncio.Queue()
@@ -149,6 +159,11 @@ async def main():
         save_messages(
             output_filepath=output_filepath,
             queue=written_to_file_messages_queue,
+        ),
+        send_messages(
+            host=chat_host,
+            port=chat_write_port,
+            queue=sending_queue,
         ),
     )
 
