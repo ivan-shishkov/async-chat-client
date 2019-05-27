@@ -2,6 +2,7 @@ import asyncio
 import socket
 import datetime
 import logging
+import json
 from contextlib import asynccontextmanager
 
 from aiofile import AIOFile
@@ -75,7 +76,33 @@ async def read_messages(
                 await asyncio.sleep(timeout_between_connection_attempts)
 
 
-async def send_messages(host, port, queue):
+async def authorise(reader, writer, auth_token):
+    greeting_message = await reader.readline()
+    logging.debug(f'Received: {greeting_message.decode().strip()}')
+
+    writer.write(f'{auth_token}\n'.encode())
+    logging.debug(f'Sent: {auth_token}')
+
+    user_credentials_message = await reader.readline()
+    logging.debug(f'Received: {user_credentials_message.decode().strip()}')
+
+    return json.loads(user_credentials_message.decode())
+
+
+async def send_messages(host, port, auth_token, queue):
+    if auth_token:
+        async with open_connection(host=host, port=port) as (reader, writer):
+            user_credentials = await authorise(
+                reader=reader,
+                writer=writer,
+                auth_token=auth_token,
+            )
+            if user_credentials:
+                logging.info(
+                    f'Successfully authorised. User: {user_credentials["nickname"]}',
+                )
+            else:
+                logging.info('Unknown token. Check it or re-register.')
     while True:
         message = await queue.get()
         logging.debug(f'User wrote: {message}')
@@ -135,6 +162,7 @@ async def main():
     chat_host = command_line_arguments.host
     chat_read_port = command_line_arguments.read_port
     chat_write_port = command_line_arguments.write_port
+    chat_auth_token = command_line_arguments.token
     output_filepath = command_line_arguments.output
 
     logging.basicConfig(level=logging.DEBUG)
@@ -163,6 +191,7 @@ async def main():
         send_messages(
             host=chat_host,
             port=chat_write_port,
+            auth_token=chat_auth_token,
             queue=sending_queue,
         ),
     )
