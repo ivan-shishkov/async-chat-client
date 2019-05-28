@@ -89,6 +89,18 @@ async def authorise(reader, writer, auth_token):
     return json.loads(user_credentials_message.decode())
 
 
+async def submit_message(reader, writer, message):
+    info_message = await reader.readline()
+    logging.debug(f'Received: {info_message.decode().strip()}')
+
+    writer.write(f'{get_sanitized_text(message)}\n\n'.encode())
+    logging.debug(f'Sent: {message}')
+
+
+def get_sanitized_text(text):
+    return text.replace('\n', '')
+
+
 async def send_messages(host, port, auth_token, queue):
     if auth_token:
         async with open_connection(host=host, port=port) as (reader, writer):
@@ -101,11 +113,17 @@ async def send_messages(host, port, auth_token, queue):
                 logging.info(
                     f'Successfully authorised. User: {user_credentials["nickname"]}',
                 )
+                while True:
+                    message = await queue.get()
+                    await submit_message(
+                        reader=reader,
+                        writer=writer,
+                        message=message,
+                    )
             else:
                 logging.info('Unknown token. Check it or re-register.')
-    while True:
-        message = await queue.get()
-        logging.debug(f'User wrote: {message}')
+    else:
+        logging.info('Auth token not given. You cannot send messages')
 
 
 def get_command_line_arguments():
