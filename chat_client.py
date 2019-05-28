@@ -23,10 +23,10 @@ async def write_to_file(file_object, text, enable_adding_datetime_info=True):
     await file_object.fsync()
 
 
-async def save_messages(output_filepath, queue):
+async def save_messages(output_filepath, messages_queue):
     async with AIOFile(output_filepath, 'a') as file_object:
         while True:
-            message = await queue.get()
+            message = await messages_queue.get()
             await write_to_file(file_object=file_object, text=message)
 
 
@@ -101,7 +101,7 @@ def get_sanitized_text(text):
     return text.replace('\n', '')
 
 
-async def send_messages(host, port, auth_token, queue):
+async def send_messages(host, port, auth_token, sending_messages_queue):
     if auth_token:
         async with open_connection(host=host, port=port) as (reader, writer):
             user_credentials = await authorise(
@@ -114,7 +114,7 @@ async def send_messages(host, port, auth_token, queue):
                     f'Successfully authorised. User: {user_credentials["nickname"]}',
                 )
                 while True:
-                    message = await queue.get()
+                    message = await sending_messages_queue.get()
                     await submit_message(
                         reader=reader,
                         writer=writer,
@@ -187,13 +187,13 @@ async def main():
 
     displayed_messages_queue = asyncio.Queue()
     written_to_file_messages_queue = asyncio.Queue()
-    sending_queue = asyncio.Queue()
+    sending_messages_queue = asyncio.Queue()
     status_updates_queue = asyncio.Queue()
 
     await asyncio.gather(
         gui.draw(
             messages_queue=displayed_messages_queue,
-            sending_queue=sending_queue,
+            sending_queue=sending_messages_queue,
             status_updates_queue=status_updates_queue,
         ),
         read_messages(
@@ -204,13 +204,13 @@ async def main():
         ),
         save_messages(
             output_filepath=output_filepath,
-            queue=written_to_file_messages_queue,
+            messages_queue=written_to_file_messages_queue,
         ),
         send_messages(
             host=chat_host,
             port=chat_write_port,
             auth_token=chat_auth_token,
-            queue=sending_queue,
+            sending_messages_queue=sending_messages_queue,
         ),
     )
 
