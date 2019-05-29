@@ -96,26 +96,40 @@ def get_sanitized_text(text):
     return text.replace('\n', '')
 
 
-async def send_messages(host, port, auth_token, sending_messages_queue):
-    async with open_connection(host=host, port=port) as (reader, writer):
-        user_credentials = await authorise(
-            reader=reader,
-            writer=writer,
-            auth_token=auth_token,
-        )
-        if user_credentials is None:
-            raise InvalidAuthToken('Unknown token. Check it or re-register.')
+async def send_messages(
+        host, port, auth_token, sending_messages_queue,
+        connection_attempts_count_without_timeout=2,
+        timeout_between_connection_attempts=3):
+    current_connection_attempt = 0
 
-        logging.info(
-            f'Successfully authorised. User: {user_credentials["nickname"]}',
-        )
-        while True:
-            message = await sending_messages_queue.get()
-            await submit_message(
-                reader=reader,
-                writer=writer,
-                message=message,
-            )
+    while True:
+        try:
+            current_connection_attempt += 1
+
+            async with open_connection(host=host, port=port) as (reader, writer):
+                current_connection_attempt = 0
+
+                user_credentials = await authorise(
+                    reader=reader,
+                    writer=writer,
+                    auth_token=auth_token,
+                )
+                if user_credentials is None:
+                    raise InvalidAuthToken('Unknown token. Check it or re-register.')
+
+                logging.info(
+                    f'Successfully authorised. User: {user_credentials["nickname"]}',
+                )
+                while True:
+                    message = await sending_messages_queue.get()
+                    await submit_message(
+                        reader=reader,
+                        writer=writer,
+                        message=message,
+                    )
+        except (socket.gaierror, ConnectionRefusedError, ConnectionResetError):
+            if current_connection_attempt >= connection_attempts_count_without_timeout:
+                await asyncio.sleep(timeout_between_connection_attempts)
 
 
 def get_command_line_arguments():
