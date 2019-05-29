@@ -12,6 +12,10 @@ import configargparse
 import gui
 
 
+class InvalidAuthToken(Exception):
+    pass
+
+
 def add_datetime_info(text):
     now = datetime.datetime.now()
     return f'[{now.strftime("%d.%m.%Y %H:%M")}] {text}'
@@ -109,19 +113,19 @@ async def send_messages(host, port, auth_token, sending_messages_queue):
             writer=writer,
             auth_token=auth_token,
         )
-        if user_credentials:
-            logging.info(
-                f'Successfully authorised. User: {user_credentials["nickname"]}',
+        if user_credentials is None:
+            raise InvalidAuthToken('Unknown token. Check it or re-register.')
+
+        logging.info(
+            f'Successfully authorised. User: {user_credentials["nickname"]}',
+        )
+        while True:
+            message = await sending_messages_queue.get()
+            await submit_message(
+                reader=reader,
+                writer=writer,
+                message=message,
             )
-            while True:
-                message = await sending_messages_queue.get()
-                await submit_message(
-                    reader=reader,
-                    writer=writer,
-                    message=message,
-                )
-        else:
-            logging.info('Unknown token. Check it or re-register.')
 
 
 def get_command_line_arguments():
