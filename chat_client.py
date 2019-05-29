@@ -3,6 +3,7 @@ import socket
 import datetime
 import logging
 import json
+import sys
 from contextlib import asynccontextmanager
 
 from aiofile import AIOFile
@@ -102,28 +103,25 @@ def get_sanitized_text(text):
 
 
 async def send_messages(host, port, auth_token, sending_messages_queue):
-    if auth_token:
-        async with open_connection(host=host, port=port) as (reader, writer):
-            user_credentials = await authorise(
-                reader=reader,
-                writer=writer,
-                auth_token=auth_token,
+    async with open_connection(host=host, port=port) as (reader, writer):
+        user_credentials = await authorise(
+            reader=reader,
+            writer=writer,
+            auth_token=auth_token,
+        )
+        if user_credentials:
+            logging.info(
+                f'Successfully authorised. User: {user_credentials["nickname"]}',
             )
-            if user_credentials:
-                logging.info(
-                    f'Successfully authorised. User: {user_credentials["nickname"]}',
+            while True:
+                message = await sending_messages_queue.get()
+                await submit_message(
+                    reader=reader,
+                    writer=writer,
+                    message=message,
                 )
-                while True:
-                    message = await sending_messages_queue.get()
-                    await submit_message(
-                        reader=reader,
-                        writer=writer,
-                        message=message,
-                    )
-            else:
-                logging.info('Unknown token. Check it or re-register.')
-    else:
-        logging.info('Auth token not given. You cannot send messages')
+        else:
+            logging.info('Unknown token. Check it or re-register.')
 
 
 def get_command_line_arguments():
@@ -184,6 +182,10 @@ async def main():
     output_filepath = command_line_arguments.output
 
     logging.basicConfig(level=logging.DEBUG)
+
+    if not chat_auth_token:
+        logging.critical('Auth token not given')
+        sys.exit(1)
 
     displayed_messages_queue = asyncio.Queue()
     written_to_file_messages_queue = asyncio.Queue()
