@@ -97,7 +97,7 @@ def get_sanitized_text(text):
 
 
 async def send_messages(
-        host, port, auth_token, sending_messages_queue,
+        host, port, auth_token, sending_messages_queue, status_updates_queue,
         connection_attempts_count_without_timeout=2,
         timeout_between_connection_attempts=3):
     current_connection_attempt = 0
@@ -105,9 +105,11 @@ async def send_messages(
     while True:
         try:
             current_connection_attempt += 1
+            status_updates_queue.put_nowait(gui.SendingConnectionStateChanged.INITIATED)
 
             async with open_connection(host=host, port=port) as (reader, writer):
                 current_connection_attempt = 0
+                status_updates_queue.put_nowait(gui.SendingConnectionStateChanged.ESTABLISHED)
 
                 user_credentials = await authorise(
                     reader=reader,
@@ -128,6 +130,8 @@ async def send_messages(
                         message=message,
                     )
         except (socket.gaierror, ConnectionRefusedError, ConnectionResetError):
+            status_updates_queue.put_nowait(gui.SendingConnectionStateChanged.CLOSED)
+
             if current_connection_attempt >= connection_attempts_count_without_timeout:
                 await asyncio.sleep(timeout_between_connection_attempts)
 
@@ -222,6 +226,7 @@ async def main():
             port=chat_write_port,
             auth_token=chat_auth_token,
             sending_messages_queue=sending_messages_queue,
+            status_updates_queue=status_updates_queue,
         ),
     )
 
