@@ -46,16 +46,18 @@ async def open_connection(host, port):
 
 async def read_messages(
         host, port, displayed_messages_queue, written_to_file_messages_queue,
-        connection_attempts_count_without_timeout=2,
+        status_updates_queue, connection_attempts_count_without_timeout=2,
         timeout_between_connection_attempts=3):
     current_connection_attempt = 0
 
     while True:
         try:
             current_connection_attempt += 1
+            status_updates_queue.put_nowait(gui.ReadConnectionStateChanged.INITIATED)
 
             async with open_connection(host=host, port=port) as (reader, writer):
                 current_connection_attempt = 0
+                status_updates_queue.put_nowait(gui.ReadConnectionStateChanged.ESTABLISHED)
 
                 displayed_messages_queue.put_nowait('Connection established')
                 written_to_file_messages_queue.put_nowait('Connection established\n')
@@ -66,6 +68,8 @@ async def read_messages(
                     written_to_file_messages_queue.put_nowait(f'{message.decode()}')
 
         except (socket.gaierror, ConnectionRefusedError, ConnectionResetError):
+            status_updates_queue.put_nowait(gui.ReadConnectionStateChanged.CLOSED)
+
             if current_connection_attempt < connection_attempts_count_without_timeout:
                 displayed_messages_queue.put_nowait('No connection. Retrying.')
                 written_to_file_messages_queue.put_nowait('No connection. Retrying.\n')
@@ -207,6 +211,7 @@ async def main():
             port=chat_read_port,
             displayed_messages_queue=displayed_messages_queue,
             written_to_file_messages_queue=written_to_file_messages_queue,
+            status_updates_queue=status_updates_queue,
         ),
         save_messages(
             output_filepath=output_filepath,
