@@ -59,9 +59,6 @@ async def read_messages(
                 current_connection_attempt = 0
                 status_updates_queue.put_nowait(gui.ReadConnectionStateChanged.ESTABLISHED)
 
-                displayed_messages_queue.put_nowait('Connection established')
-                written_to_file_messages_queue.put_nowait('Connection established\n')
-
                 while True:
                     message = await reader.readline()
                     displayed_messages_queue.put_nowait(f'{message.decode().strip()}')
@@ -70,18 +67,7 @@ async def read_messages(
         except (socket.gaierror, ConnectionRefusedError, ConnectionResetError):
             status_updates_queue.put_nowait(gui.ReadConnectionStateChanged.CLOSED)
 
-            if current_connection_attempt < connection_attempts_count_without_timeout:
-                displayed_messages_queue.put_nowait('No connection. Retrying.')
-                written_to_file_messages_queue.put_nowait('No connection. Retrying.\n')
-            else:
-                displayed_messages_queue.put_nowait(
-                    f'No connection. '
-                    f'Retrying in {timeout_between_connection_attempts} sec.',
-                )
-                written_to_file_messages_queue.put_nowait(
-                    f'No connection. '
-                    f'Retrying in {timeout_between_connection_attempts} sec.\n',
-                )
+            if current_connection_attempt >= connection_attempts_count_without_timeout:
                 await asyncio.sleep(timeout_between_connection_attempts)
 
 
