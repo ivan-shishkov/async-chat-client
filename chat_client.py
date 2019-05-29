@@ -12,7 +12,7 @@ import configargparse
 import gui
 
 
-class InvalidAuthToken(Exception):
+class UnknownAuthToken(Exception):
     pass
 
 
@@ -117,7 +117,7 @@ async def send_messages(
                     auth_token=auth_token,
                 )
                 if user_credentials is None:
-                    raise InvalidAuthToken('Unknown token. Check it or re-register.')
+                    raise UnknownAuthToken()
 
                 status_updates_queue.put_nowait(
                     gui.NicknameReceived(user_credentials["nickname"]),
@@ -235,5 +235,7 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(main())
+    except UnknownAuthToken:
+        sys.exit('Unknown token. Check it or re-register.')
     except (KeyboardInterrupt, gui.TkAppClosed):
         pass
