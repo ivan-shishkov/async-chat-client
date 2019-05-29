@@ -119,8 +119,8 @@ async def send_messages(
                 if user_credentials is None:
                     raise InvalidAuthToken('Unknown token. Check it or re-register.')
 
-                logging.info(
-                    f'Successfully authorised. User: {user_credentials["nickname"]}',
+                status_updates_queue.put_nowait(
+                    gui.NicknameReceived(user_credentials["nickname"]),
                 )
                 while True:
                     message = await sending_messages_queue.get()
