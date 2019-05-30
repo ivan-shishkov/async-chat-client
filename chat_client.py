@@ -196,8 +196,7 @@ async def main():
     logging.basicConfig(level=logging.DEBUG)
 
     if not chat_auth_token:
-        logging.critical('Auth token not given')
-        sys.exit(1)
+        sys.exit('Auth token not given')
 
     displayed_messages_queue = asyncio.Queue()
     written_to_file_messages_queue = asyncio.Queue()
