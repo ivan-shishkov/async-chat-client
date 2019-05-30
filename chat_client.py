@@ -44,7 +44,7 @@ async def open_connection(host, port):
         writer.close()
 
 
-async def read_messages(
+async def run_chat_reader(
         host, port, displayed_messages_queue, written_to_file_messages_queue,
         status_updates_queue, connection_attempts_count_without_timeout=2,
         timeout_between_connection_attempts=3):
@@ -96,7 +96,7 @@ def get_sanitized_text(text):
     return text.replace('\n', '')
 
 
-async def send_messages(
+async def run_chat_writer(
         host, port, auth_token, sending_messages_queue, status_updates_queue,
         connection_attempts_count_without_timeout=2,
         timeout_between_connection_attempts=3):
@@ -210,7 +210,7 @@ async def main():
             sending_queue=sending_messages_queue,
             status_updates_queue=status_updates_queue,
         ),
-        read_messages(
+        run_chat_reader(
             host=chat_host,
             port=chat_read_port,
             displayed_messages_queue=displayed_messages_queue,
@@ -221,7 +221,7 @@ async def main():
             output_filepath=output_filepath,
             messages_queue=written_to_file_messages_queue,
         ),
-        send_messages(
+        run_chat_writer(
             host=chat_host,
             port=chat_write_port,
             auth_token=chat_auth_token,
