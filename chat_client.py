@@ -5,6 +5,7 @@ import logging
 import json
 import sys
 from contextlib import asynccontextmanager
+from tkinter import messagebox
 
 from aiofile import AIOFile
 import configargparse
@@ -235,6 +236,7 @@ if __name__ == '__main__':
     try:
         loop.run_until_complete(main())
     except InvalidToken:
-        sys.exit('Unknown token. Check it or re-register.')
+        messagebox.showerror('Invalid token', 'Unknown token. Check it')
+        sys.exit(1)
     except (KeyboardInterrupt, gui.TkAppClosed):
         pass
