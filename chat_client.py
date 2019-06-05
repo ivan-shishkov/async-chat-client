@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 from tkinter import messagebox
 
 from aiofile import AIOFile
+from async_timeout import timeout
 import configargparse
 
 import gui
@@ -37,17 +38,25 @@ async def save_messages(output_filepath, messages_queue):
             await write_to_file(file_object=file_object, text=message)
 
 
-def get_formatted_watchdog_message(source_message):
-    return f'[{int(time.time())}] Connection is alive. {source_message}'
-
-
-async def watch_for_connection(watchdog_messages_queue):
+async def watch_for_connection(watchdog_messages_queue, max_timeout_between_messages=1):
     watchdog_logger = logging.getLogger('watchdog')
     watchdog_logger.setLevel(level=logging.DEBUG)
 
     while True:
-        message = await watchdog_messages_queue.get()
-        watchdog_logger.debug(f'{message}')
+        try:
+            async with timeout(max_timeout_between_messages) as timeout_manager:
+                message = await watchdog_messages_queue.get()
+        except asyncio.TimeoutError:
+            if not timeout_manager.expired:
+                raise
+            watchdog_logger.warning(
+                f'[{int(time.time())}] {max_timeout_between_messages}s timeout is elapsed',
+            )
+            continue
+
+        watchdog_logger.debug(
+            f'[{int(time.time())}] Connection is alive. {message}',
+        )
 
 
 @asynccontextmanager
@@ -80,9 +89,7 @@ async def run_chat_reader(
 
                     displayed_messages_queue.put_nowait(f'{message.decode().strip()}')
                     written_to_file_messages_queue.put_nowait(f'{message.decode()}')
-                    watchdog_messages_queue.put_nowait(
-                        get_formatted_watchdog_message('New message in chat'),
-                    )
+                    watchdog_messages_queue.put_nowait('New message in chat')
 
         except (socket.gaierror, ConnectionRefusedError, ConnectionResetError):
             status_updates_queue.put_nowait(gui.ReadConnectionStateChanged.CLOSED)
@@ -94,18 +101,14 @@ async def run_chat_reader(
 async def authorise(reader, writer, auth_token, watchdog_messages_queue):
     greeting_message = await reader.readline()
     logging.debug(f'Received: {greeting_message.decode().strip()}')
-    watchdog_messages_queue.put_nowait(
-        get_formatted_watchdog_message('Prompt before auth'),
-    )
+    watchdog_messages_queue.put_nowait('Prompt before auth')
 
     writer.write(f'{auth_token}\n'.encode())
     logging.debug(f'Sent: {auth_token}')
 
     user_credentials_message = await reader.readline()
     logging.debug(f'Received: {user_credentials_message.decode().strip()}')
-    watchdog_messages_queue.put_nowait(
-        get_formatted_watchdog_message('Authorisation done'),
-    )
+    watchdog_messages_queue.put_nowait('Authorisation done')
 
     return json.loads(user_credentials_message.decode())
 
@@ -113,9 +116,7 @@ async def authorise(reader, writer, auth_token, watchdog_messages_queue):
 async def submit_message(reader, writer, message, watchdog_messages_queue):
     info_message = await reader.readline()
     logging.debug(f'Received: {info_message.decode().strip()}')
-    watchdog_messages_queue.put_nowait(
-        get_formatted_watchdog_message('Prompt before message send'),
-    )
+    watchdog_messages_queue.put_nowait('Prompt before message send')
 
     writer.write(f'{get_sanitized_text(message)}\n\n'.encode())
     logging.debug(f'Sent: {message}')
