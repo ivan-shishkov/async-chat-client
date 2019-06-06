@@ -1,3 +1,4 @@
 aiofile==1.5.2
+aionursery==0.3.0
 async-timeout==3.0.1
 ConfigArgParse==0.14.0
