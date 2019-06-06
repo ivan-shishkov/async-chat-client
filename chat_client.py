@@ -92,16 +92,24 @@ async def authorise(reader, writer, auth_token, watchdog_messages_queue):
     logging.debug(f'Received: {user_credentials_message.decode().strip()}')
     watchdog_messages_queue.put_nowait('Authorisation done')
 
-    return json.loads(user_credentials_message.decode())
+    user_credentials = json.loads(user_credentials_message.decode())
+
+    if user_credentials is None:
+        return None
+
+    welcome_to_chat_message = await reader.readline()
+    logging.debug(f'Received: {welcome_to_chat_message.decode().strip()}')
+
+    return user_credentials
 
 
 async def submit_message(reader, writer, message, watchdog_messages_queue):
-    info_message = await reader.readline()
-    logging.debug(f'Received: {info_message.decode().strip()}')
-    watchdog_messages_queue.put_nowait('Prompt before message send')
-
     writer.write(f'{get_sanitized_text(message)}\n\n'.encode())
     logging.debug(f'Sent: {message}')
+
+    successfully_sent_message = await reader.readline()
+    logging.debug(f'Received: {successfully_sent_message.decode().strip()}')
+    watchdog_messages_queue.put_nowait('Message sent')
 
 
 def get_sanitized_text(text):
