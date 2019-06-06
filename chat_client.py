@@ -216,6 +216,35 @@ def get_command_line_arguments():
     return parser.parse_args()
 
 
+async def handle_connection(
+        host, read_port, write_port, auth_token, displayed_messages_queue,
+        written_to_file_messages_queue, sending_messages_queue,
+        status_updates_queue):
+    watchdog_messages_queue = asyncio.Queue()
+
+    await asyncio.gather(
+        run_chat_reader(
+            host=host,
+            port=read_port,
+            displayed_messages_queue=displayed_messages_queue,
+            written_to_file_messages_queue=written_to_file_messages_queue,
+            status_updates_queue=status_updates_queue,
+            watchdog_messages_queue=watchdog_messages_queue,
+        ),
+        run_chat_writer(
+            host=host,
+            port=write_port,
+            auth_token=auth_token,
+            sending_messages_queue=sending_messages_queue,
+            status_updates_queue=status_updates_queue,
+            watchdog_messages_queue=watchdog_messages_queue,
+        ),
+        watch_for_connection(
+            watchdog_messages_queue=watchdog_messages_queue,
+        ),
+    )
+
+
 async def main():
     command_line_arguments = get_command_line_arguments()
 
@@ -234,37 +263,27 @@ async def main():
     written_to_file_messages_queue = asyncio.Queue()
     sending_messages_queue = asyncio.Queue()
     status_updates_queue = asyncio.Queue()
-    watchdog_messages_queue = asyncio.Queue()
 
     await asyncio.gather(
+        handle_connection(
+            host=chat_host,
+            read_port=chat_read_port,
+            write_port=chat_write_port,
+            auth_token=chat_auth_token,
+            displayed_messages_queue=displayed_messages_queue,
+            written_to_file_messages_queue=written_to_file_messages_queue,
+            sending_messages_queue=sending_messages_queue,
+            status_updates_queue=status_updates_queue,
+        ),
         gui.draw(
             messages_queue=displayed_messages_queue,
             sending_queue=sending_messages_queue,
             status_updates_queue=status_updates_queue,
         ),
-        run_chat_reader(
-            host=chat_host,
-            port=chat_read_port,
-            displayed_messages_queue=displayed_messages_queue,
-            written_to_file_messages_queue=written_to_file_messages_queue,
-            status_updates_queue=status_updates_queue,
-            watchdog_messages_queue=watchdog_messages_queue,
-        ),
         save_messages(
             output_filepath=output_filepath,
             messages_queue=written_to_file_messages_queue,
         ),
-        run_chat_writer(
-            host=chat_host,
-            port=chat_write_port,
-            auth_token=chat_auth_token,
-            sending_messages_queue=sending_messages_queue,
-            status_updates_queue=status_updates_queue,
-            watchdog_messages_queue=watchdog_messages_queue,
-        ),
-        watch_for_connection(
-            watchdog_messages_queue=watchdog_messages_queue,
-        )
     )
 
 
