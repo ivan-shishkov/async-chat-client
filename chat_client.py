@@ -1,5 +1,4 @@
 import asyncio
-import socket
 import datetime
 import logging
 import json
@@ -59,43 +58,25 @@ async def watch_for_connection(watchdog_messages_queue, max_timeout_between_mess
         )
 
 
-@asynccontextmanager
-async def open_connection(host, port):
-    reader, writer = await asyncio.open_connection(host=host, port=port)
-    try:
-        yield reader, writer
-    finally:
-        writer.close()
-
-
 async def run_chat_reader(
         host, port, displayed_messages_queue, written_to_file_messages_queue,
-        status_updates_queue, watchdog_messages_queue,
-        connection_attempts_count_without_timeout=2,
-        timeout_between_connection_attempts=3):
-    current_connection_attempt = 0
+        status_updates_queue, watchdog_messages_queue):
+    status_updates_queue.put_nowait(gui.ReadConnectionStateChanged.INITIATED)
 
-    while True:
-        try:
-            current_connection_attempt += 1
-            status_updates_queue.put_nowait(gui.ReadConnectionStateChanged.INITIATED)
+    reader, writer = await asyncio.open_connection(host=host, port=port)
 
-            async with open_connection(host=host, port=port) as (reader, writer):
-                current_connection_attempt = 0
-                status_updates_queue.put_nowait(gui.ReadConnectionStateChanged.ESTABLISHED)
+    try:
+        status_updates_queue.put_nowait(gui.ReadConnectionStateChanged.ESTABLISHED)
 
-                while True:
-                    message = await reader.readline()
+        while True:
+            message = await reader.readline()
 
-                    displayed_messages_queue.put_nowait(f'{message.decode().strip()}')
-                    written_to_file_messages_queue.put_nowait(f'{message.decode()}')
-                    watchdog_messages_queue.put_nowait('New message in chat')
-
-        except (socket.gaierror, ConnectionRefusedError, ConnectionResetError):
-            status_updates_queue.put_nowait(gui.ReadConnectionStateChanged.CLOSED)
-
-            if current_connection_attempt >= connection_attempts_count_without_timeout:
-                await asyncio.sleep(timeout_between_connection_attempts)
+            displayed_messages_queue.put_nowait(f'{message.decode().strip()}')
+            written_to_file_messages_queue.put_nowait(f'{message.decode()}')
+            watchdog_messages_queue.put_nowait('New message in chat')
+    finally:
+        writer.close()
+        status_updates_queue.put_nowait(gui.ReadConnectionStateChanged.CLOSED)
 
 
 async def authorise(reader, writer, auth_token, watchdog_messages_queue):
@@ -128,44 +109,37 @@ def get_sanitized_text(text):
 
 async def run_chat_writer(
         host, port, auth_token, sending_messages_queue, status_updates_queue,
-        watchdog_messages_queue, connection_attempts_count_without_timeout=2,
-        timeout_between_connection_attempts=3):
-    current_connection_attempt = 0
+        watchdog_messages_queue):
+    status_updates_queue.put_nowait(gui.SendingConnectionStateChanged.INITIATED)
 
-    while True:
-        try:
-            current_connection_attempt += 1
-            status_updates_queue.put_nowait(gui.SendingConnectionStateChanged.INITIATED)
+    reader, writer = await asyncio.open_connection(host=host, port=port)
 
-            async with open_connection(host=host, port=port) as (reader, writer):
-                current_connection_attempt = 0
-                status_updates_queue.put_nowait(gui.SendingConnectionStateChanged.ESTABLISHED)
+    try:
+        status_updates_queue.put_nowait(gui.SendingConnectionStateChanged.ESTABLISHED)
 
-                user_credentials = await authorise(
-                    reader=reader,
-                    writer=writer,
-                    auth_token=auth_token,
-                    watchdog_messages_queue=watchdog_messages_queue,
-                )
-                if user_credentials is None:
-                    raise InvalidToken()
+        user_credentials = await authorise(
+            reader=reader,
+            writer=writer,
+            auth_token=auth_token,
+            watchdog_messages_queue=watchdog_messages_queue,
+        )
+        if user_credentials is None:
+            raise InvalidToken()
 
-                status_updates_queue.put_nowait(
-                    gui.NicknameReceived(user_credentials["nickname"]),
-                )
-                while True:
-                    message = await sending_messages_queue.get()
-                    await submit_message(
-                        reader=reader,
-                        writer=writer,
-                        message=message,
-                        watchdog_messages_queue=watchdog_messages_queue,
-                    )
-        except (socket.gaierror, ConnectionRefusedError, ConnectionResetError):
-            status_updates_queue.put_nowait(gui.SendingConnectionStateChanged.CLOSED)
-
-            if current_connection_attempt >= connection_attempts_count_without_timeout:
-                await asyncio.sleep(timeout_between_connection_attempts)
+        status_updates_queue.put_nowait(
+            gui.NicknameReceived(user_credentials["nickname"]),
+        )
+        while True:
+            message = await sending_messages_queue.get()
+            await submit_message(
+                reader=reader,
+                writer=writer,
+                message=message,
+                watchdog_messages_queue=watchdog_messages_queue,
+            )
+    finally:
+        writer.close()
+        status_updates_queue.put_nowait(gui.SendingConnectionStateChanged.CLOSED)
 
 
 def get_command_line_arguments():
