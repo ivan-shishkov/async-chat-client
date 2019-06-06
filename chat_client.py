@@ -9,6 +9,7 @@ from tkinter import messagebox
 
 from aiofile import AIOFile
 from async_timeout import timeout
+from aionursery import Nursery, MultiError
 import configargparse
 
 import gui
@@ -51,7 +52,7 @@ async def watch_for_connection(watchdog_messages_queue, max_timeout_between_mess
             watchdog_logger.warning(
                 f'[{int(time.time())}] {max_timeout_between_messages}s timeout is elapsed',
             )
-            continue
+            raise ConnectionError
 
         watchdog_logger.debug(
             f'[{int(time.time())}] Connection is alive. {message}',
@@ -190,33 +191,53 @@ def get_command_line_arguments():
     return parser.parse_args()
 
 
+@asynccontextmanager
+async def create_handy_nursery():
+    try:
+        async with Nursery() as nursery:
+            yield nursery
+    except MultiError as e:
+        if len(e.exceptions) == 1:
+            raise e.exceptions[0]
+        raise
+
+
 async def handle_connection(
         host, read_port, write_port, auth_token, displayed_messages_queue,
         written_to_file_messages_queue, sending_messages_queue,
         status_updates_queue):
     watchdog_messages_queue = asyncio.Queue()
 
-    await asyncio.gather(
-        run_chat_reader(
-            host=host,
-            port=read_port,
-            displayed_messages_queue=displayed_messages_queue,
-            written_to_file_messages_queue=written_to_file_messages_queue,
-            status_updates_queue=status_updates_queue,
-            watchdog_messages_queue=watchdog_messages_queue,
-        ),
-        run_chat_writer(
-            host=host,
-            port=write_port,
-            auth_token=auth_token,
-            sending_messages_queue=sending_messages_queue,
-            status_updates_queue=status_updates_queue,
-            watchdog_messages_queue=watchdog_messages_queue,
-        ),
-        watch_for_connection(
-            watchdog_messages_queue=watchdog_messages_queue,
-        ),
-    )
+    while True:
+        try:
+            async with create_handy_nursery() as nursery:
+                nursery.start_soon(
+                    run_chat_reader(
+                        host=host,
+                        port=read_port,
+                        displayed_messages_queue=displayed_messages_queue,
+                        written_to_file_messages_queue=written_to_file_messages_queue,
+                        status_updates_queue=status_updates_queue,
+                        watchdog_messages_queue=watchdog_messages_queue,
+                    ),
+                )
+                nursery.start_soon(
+                    run_chat_writer(
+                        host=host,
+                        port=write_port,
+                        auth_token=auth_token,
+                        sending_messages_queue=sending_messages_queue,
+                        status_updates_queue=status_updates_queue,
+                        watchdog_messages_queue=watchdog_messages_queue,
+                    ),
+                )
+                nursery.start_soon(
+                    watch_for_connection(
+                        watchdog_messages_queue=watchdog_messages_queue,
+                    ),
+                )
+        except ConnectionError:
+            pass
 
 
 async def main():
