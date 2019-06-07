@@ -99,6 +99,7 @@ async def authorise(reader, writer, auth_token, watchdog_messages_queue):
 
     welcome_to_chat_message = await reader.readline()
     logging.debug(f'Received: {welcome_to_chat_message.decode().strip()}')
+    watchdog_messages_queue.put_nowait('Welcome to chat message received')
 
     return user_credentials
 
