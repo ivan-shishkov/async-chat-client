@@ -3,6 +3,7 @@ import datetime
 import logging
 import json
 import sys
+import socket
 import time
 from contextlib import asynccontextmanager
 from tkinter import messagebox
@@ -38,7 +39,8 @@ async def save_messages(output_filepath, messages_queue):
             await write_to_file(file_object=file_object, text=message)
 
 
-async def watch_for_connection(watchdog_messages_queue, max_timeout_between_messages=1):
+async def watch_for_connection(
+        watchdog_messages_queue, max_timeout_between_messages=2):
     watchdog_logger = logging.getLogger('watchdog')
     watchdog_logger.setLevel(level=logging.DEBUG)
 
@@ -117,6 +119,31 @@ def get_sanitized_text(text):
     return text.replace('\n', '')
 
 
+async def submit_empty_messages(
+        reader, writer, watchdog_messages_queue,
+        timeout_between_submitting_messages=1):
+    while True:
+        await submit_message(
+            reader=reader,
+            writer=writer,
+            message='',
+            watchdog_messages_queue=watchdog_messages_queue,
+        )
+        await asyncio.sleep(timeout_between_submitting_messages)
+
+
+async def submit_messages(
+        reader, writer, sending_messages_queue, watchdog_messages_queue):
+    while True:
+        message = await sending_messages_queue.get()
+        await submit_message(
+            reader=reader,
+            writer=writer,
+            message=message,
+            watchdog_messages_queue=watchdog_messages_queue,
+        )
+
+
 async def run_chat_writer(
         host, port, auth_token, sending_messages_queue, status_updates_queue,
         watchdog_messages_queue):
@@ -139,13 +166,22 @@ async def run_chat_writer(
         status_updates_queue.put_nowait(
             gui.NicknameReceived(user_credentials["nickname"]),
         )
-        while True:
-            message = await sending_messages_queue.get()
-            await submit_message(
-                reader=reader,
-                writer=writer,
-                message=message,
-                watchdog_messages_queue=watchdog_messages_queue,
+
+        async with create_handy_nursery() as nursery:
+            nursery.start_soon(
+                submit_messages(
+                    reader=reader,
+                    writer=writer,
+                    sending_messages_queue=sending_messages_queue,
+                    watchdog_messages_queue=watchdog_messages_queue,
+                ),
+            )
+            nursery.start_soon(
+                submit_empty_messages(
+                    reader=reader,
+                    writer=writer,
+                    watchdog_messages_queue=watchdog_messages_queue,
+                ),
             )
     finally:
         writer.close()
@@ -214,7 +250,7 @@ async def create_handy_nursery():
 async def handle_connection(
         host, read_port, write_port, auth_token, displayed_messages_queue,
         written_to_file_messages_queue, sending_messages_queue,
-        status_updates_queue):
+        status_updates_queue, timeout_between_connection_attempts=1):
     watchdog_messages_queue = asyncio.Queue()
 
     while True:
@@ -245,8 +281,14 @@ async def handle_connection(
                         watchdog_messages_queue=watchdog_messages_queue,
                     ),
                 )
-        except ConnectionError:
+        except MultiError as e:
+            for exc in e.exceptions:
+                if not isinstance(exc, socket.gaierror):
+                    raise
+        except (ConnectionError, socket.gaierror):
             pass
+
+        await asyncio.sleep(timeout_between_connection_attempts)
 
 
 async def main():
