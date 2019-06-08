@@ -139,12 +139,14 @@ async def send_messages(
         reader, writer, sending_messages_queue, watchdog_messages_queue):
     while True:
         message = await sending_messages_queue.get()
-        await send_message(
-            reader=reader,
-            writer=writer,
-            message=message,
-            watchdog_messages_queue=watchdog_messages_queue,
-        )
+
+        if message:
+            await send_message(
+                reader=reader,
+                writer=writer,
+                message=message,
+                watchdog_messages_queue=watchdog_messages_queue,
+            )
 
 
 async def run_chat_writer(
