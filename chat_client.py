@@ -106,7 +106,7 @@ async def authorise(reader, writer, auth_token, watchdog_messages_queue):
     return user_credentials
 
 
-async def submit_message(reader, writer, message, watchdog_messages_queue):
+async def send_message(reader, writer, message, watchdog_messages_queue):
     writer.write(f'{get_sanitized_text(message)}\n\n'.encode())
     logging.debug(f'Sent: {message}')
 
@@ -119,11 +119,11 @@ def get_sanitized_text(text):
     return text.replace('\n', '')
 
 
-async def submit_empty_messages(
+async def send_empty_messages(
         reader, writer, watchdog_messages_queue,
         timeout_between_submitting_messages=1):
     while True:
-        await submit_message(
+        await send_message(
             reader=reader,
             writer=writer,
             message='',
@@ -132,11 +132,11 @@ async def submit_empty_messages(
         await asyncio.sleep(timeout_between_submitting_messages)
 
 
-async def submit_messages(
+async def send_messages(
         reader, writer, sending_messages_queue, watchdog_messages_queue):
     while True:
         message = await sending_messages_queue.get()
-        await submit_message(
+        await send_message(
             reader=reader,
             writer=writer,
             message=message,
@@ -169,7 +169,7 @@ async def run_chat_writer(
 
         async with create_handy_nursery() as nursery:
             nursery.start_soon(
-                submit_messages(
+                send_messages(
                     reader=reader,
                     writer=writer,
                     sending_messages_queue=sending_messages_queue,
@@ -177,7 +177,7 @@ async def run_chat_writer(
                 ),
             )
             nursery.start_soon(
-                submit_empty_messages(
+                send_empty_messages(
                     reader=reader,
                     writer=writer,
                     watchdog_messages_queue=watchdog_messages_queue,
