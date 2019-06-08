@@ -108,7 +108,9 @@ async def authorise(reader, writer, auth_token, watchdog_messages_queue):
 
 
 async def send_message(reader, writer, message, watchdog_messages_queue):
-    writer.write(f'{get_sanitized_text(message)}\n\n'.encode())
+    sending_message = f'{get_sanitized_text(message)}\n\n' if message else '\n'
+
+    writer.write(sending_message.encode())
     logging.debug(f'Sent: {message}')
 
     successfully_sent_message = await reader.readline()
