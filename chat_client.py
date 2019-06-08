@@ -121,7 +121,7 @@ def get_sanitized_text(text):
 
 async def send_empty_messages(
         reader, writer, watchdog_messages_queue,
-        timeout_between_submitting_messages=1):
+        timeout_between_sending_messages=1):
     while True:
         await send_message(
             reader=reader,
@@ -129,7 +129,7 @@ async def send_empty_messages(
             message='',
             watchdog_messages_queue=watchdog_messages_queue,
         )
-        await asyncio.sleep(timeout_between_submitting_messages)
+        await asyncio.sleep(timeout_between_sending_messages)
 
 
 async def send_messages(
