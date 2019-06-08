@@ -40,19 +40,20 @@ async def save_messages(output_filepath, messages_queue):
 
 
 async def watch_for_connection(
-        watchdog_messages_queue, max_timeout_between_messages=2):
+        watchdog_messages_queue, max_pending_time_between_messages=2):
     watchdog_logger = logging.getLogger('watchdog')
     watchdog_logger.setLevel(level=logging.DEBUG)
 
     while True:
         try:
-            async with timeout(max_timeout_between_messages) as timeout_manager:
+            async with timeout(max_pending_time_between_messages) as timeout_manager:
                 message = await watchdog_messages_queue.get()
         except asyncio.TimeoutError:
             if not timeout_manager.expired:
                 raise
             watchdog_logger.warning(
-                f'[{int(time.time())}] {max_timeout_between_messages}s timeout is elapsed',
+                f'[{int(time.time())}] '
+                f'{max_pending_time_between_messages}s timeout is elapsed',
             )
             raise ConnectionError
 
