@@ -40,7 +40,7 @@ async def save_messages(output_filepath, messages_queue):
 
 
 async def watch_for_connection(
-        watchdog_messages_queue, max_pending_time_between_messages=2):
+        watchdog_messages_queue, max_pending_time_between_messages=4):
     watchdog_logger = logging.getLogger('watchdog')
     watchdog_logger.setLevel(level=logging.DEBUG)
 
@@ -124,7 +124,7 @@ def get_sanitized_text(text):
 
 async def send_empty_messages(
         reader, writer, watchdog_messages_queue,
-        timeout_between_sending_messages=1):
+        timeout_between_sending_messages=2):
     while True:
         await send_message(
             reader=reader,
@@ -253,7 +253,7 @@ async def create_handy_nursery():
 async def handle_connection(
         host, read_port, write_port, auth_token, displayed_messages_queue,
         written_to_file_messages_queue, sending_messages_queue,
-        status_updates_queue, timeout_between_connection_attempts=1):
+        status_updates_queue, timeout_between_connection_attempts=2):
     watchdog_messages_queue = asyncio.Queue()
 
     while True:
