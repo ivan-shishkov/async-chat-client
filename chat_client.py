@@ -12,7 +12,7 @@ from async_timeout import timeout
 from aionursery import MultiError
 import configargparse
 
-import gui
+import gui_chat_client as gui
 from utils import create_handy_nursery
 
 
