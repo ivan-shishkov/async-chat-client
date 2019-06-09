@@ -5,15 +5,15 @@ import json
 import sys
 import socket
 import time
-from contextlib import asynccontextmanager
 from tkinter import messagebox
 
 from aiofile import AIOFile
 from async_timeout import timeout
-from aionursery import Nursery, MultiError
+from aionursery import MultiError
 import configargparse
 
 import gui
+from utils import create_handy_nursery
 
 
 class InvalidToken(Exception):
@@ -239,17 +239,6 @@ def get_command_line_arguments():
         default='chat.txt',
     )
     return parser.parse_args()
-
-
-@asynccontextmanager
-async def create_handy_nursery():
-    try:
-        async with Nursery() as nursery:
-            yield nursery
-    except MultiError as e:
-        if len(e.exceptions) == 1:
-            raise e.exceptions[0]
-        raise
 
 
 async def handle_connection(
