@@ -222,7 +222,7 @@ def get_command_line_arguments():
         help='User token for authorisation in chat.',
         env_var='CHAT_AUTH_TOKEN',
         type=str,
-        default='',
+        required=True,
     )
     parser.add_argument(
         '--output',
