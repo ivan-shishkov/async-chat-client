@@ -286,6 +286,7 @@ async def handle_connection(
                         watchdog_messages_queue=watchdog_messages_queue,
                     ),
                 )
+            return
         except MultiError as e:
             for exc in e.exceptions:
                 if not isinstance(exc, socket.gaierror):
@@ -315,27 +316,32 @@ async def main():
     sending_messages_queue = asyncio.Queue()
     status_updates_queue = asyncio.Queue()
 
-    await asyncio.gather(
-        handle_connection(
-            host=chat_host,
-            read_port=chat_read_port,
-            write_port=chat_write_port,
-            auth_token=chat_auth_token,
-            displayed_messages_queue=displayed_messages_queue,
-            written_to_file_messages_queue=written_to_file_messages_queue,
-            sending_messages_queue=sending_messages_queue,
-            status_updates_queue=status_updates_queue,
-        ),
-        gui.draw(
-            messages_queue=displayed_messages_queue,
-            sending_queue=sending_messages_queue,
-            status_updates_queue=status_updates_queue,
-        ),
-        save_messages(
-            output_filepath=output_filepath,
-            messages_queue=written_to_file_messages_queue,
-        ),
-    )
+    async with create_handy_nursery() as nursery:
+        nursery.start_soon(
+            handle_connection(
+                host=chat_host,
+                read_port=chat_read_port,
+                write_port=chat_write_port,
+                auth_token=chat_auth_token,
+                displayed_messages_queue=displayed_messages_queue,
+                written_to_file_messages_queue=written_to_file_messages_queue,
+                sending_messages_queue=sending_messages_queue,
+                status_updates_queue=status_updates_queue,
+            ),
+        )
+        nursery.start_soon(
+            gui.draw(
+                messages_queue=displayed_messages_queue,
+                sending_queue=sending_messages_queue,
+                status_updates_queue=status_updates_queue,
+            ),
+        )
+        nursery.start_soon(
+            save_messages(
+                output_filepath=output_filepath,
+                messages_queue=written_to_file_messages_queue,
+            ),
+        )
 
 
 if __name__ == '__main__':
