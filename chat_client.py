@@ -225,13 +225,6 @@ def get_command_line_arguments():
         default='',
     )
     parser.add_argument(
-        '--nickname',
-        help='User nickname for registering in chat.',
-        env_var='CHAT_NICKNAME',
-        type=str,
-        default='',
-    )
-    parser.add_argument(
         '--output',
         help='Filepath for save chat messages. Default: chat.txt',
         env_var='OUTPUT_FILEPATH',
