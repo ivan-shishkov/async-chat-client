@@ -24,7 +24,7 @@ async def update_tk(root_frame, interval=1 / 120):
         await asyncio.sleep(interval)
 
 
-async def draw(sending_queue):
+async def draw(nickname_queue):
     root = tk.Tk()
 
     root.title('Minecraft Chat Registrator')
@@ -42,7 +42,7 @@ async def draw(sending_queue):
 
     send_button = tk.Button(root_frame, font='arial 14', height=1)
     send_button['text'] = 'Register'
-    send_button['command'] = lambda: process_nickname(input_field, sending_queue)
+    send_button['command'] = lambda: process_nickname(input_field, nickname_queue)
     send_button.pack(side='top', ipady=10, pady=10)
 
     await update_tk(root_frame)

@@ -47,12 +47,12 @@ async def save_user_credentials(user_credentials, output_filepath):
 
 
 async def run_chat_registrator(
-        host, port, sending_messages_queue, user_credentials_output_filepath):
+        host, port, nickname_queue, user_credentials_output_filepath):
     writer = None
 
     while True:
         try:
-            nickname = await sending_messages_queue.get()
+            nickname = await nickname_queue.get()
 
             reader, writer = await asyncio.open_connection(host=host, port=port)
 
@@ -113,24 +113,24 @@ async def main():
 
     chat_host = command_line_arguments.host
     chat_port = command_line_arguments.port
-    output_filepath = command_line_arguments.output
+    user_credentials_output_filepath = command_line_arguments.output
 
-    sending_messages_queue = asyncio.Queue()
+    nickname_queue = asyncio.Queue()
 
     logging.basicConfig(level=logging.DEBUG)
 
     async with create_handy_nursery() as nursery:
         nursery.start_soon(
             gui.draw(
-                sending_queue=sending_messages_queue,
+                nickname_queue=nickname_queue,
             ),
         )
         nursery.start_soon(
             run_chat_registrator(
                 host=chat_host,
                 port=chat_port,
-                sending_messages_queue=sending_messages_queue,
-                user_credentials_output_filepath=output_filepath,
+                nickname_queue=nickname_queue,
+                user_credentials_output_filepath=user_credentials_output_filepath,
             )
         )
 
