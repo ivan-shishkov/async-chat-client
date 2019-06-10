@@ -11,6 +11,7 @@ def process_nickname(input_field, sending_queue):
 
     if text:
         sending_queue.put_nowait(text)
+        input_field.delete(0, tk.END)
 
 
 async def update_tk(root_frame, interval=1 / 120):
