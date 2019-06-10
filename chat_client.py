@@ -224,7 +224,7 @@ def get_command_line_arguments():
     parser.add_argument(
         '--output',
         help='Filepath for save chat messages. Default: chat.txt',
-        env_var='OUTPUT_FILEPATH',
+        env_var='CHAT_MESSAGES_OUTPUT_FILEPATH',
         type=str,
         default='chat.txt',
     )
