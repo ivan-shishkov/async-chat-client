@@ -47,8 +47,7 @@ async def save_user_credentials(user_credentials, output_filepath):
 
 
 async def run_chat_registrator(
-        host, port, sending_messages_queue,
-        user_credentials_output_filepath='user_credentials.txt'):
+        host, port, sending_messages_queue, user_credentials_output_filepath):
     writer = None
 
     while True:
@@ -99,6 +98,13 @@ def get_command_line_arguments():
         type=int,
         default=5050,
     )
+    parser.add_argument(
+        '--output',
+        help='Filepath for save user credentials. Default: user_credentials.txt',
+        env_var='USER_CREDENTIALS_OUTPUT_FILEPATH',
+        type=str,
+        default='user_credentials.txt',
+    )
     return parser.parse_args()
 
 
@@ -107,6 +113,7 @@ async def main():
 
     chat_host = command_line_arguments.host
     chat_port = command_line_arguments.port
+    output_filepath = command_line_arguments.output
 
     sending_messages_queue = asyncio.Queue()
 
@@ -123,6 +130,7 @@ async def main():
                 host=chat_host,
                 port=chat_port,
                 sending_messages_queue=sending_messages_queue,
+                user_credentials_output_filepath=output_filepath,
             )
         )
 
