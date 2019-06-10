@@ -6,7 +6,7 @@ class TkAppClosed(Exception):
     pass
 
 
-def process_new_message(input_field, sending_queue):
+def process_nickname(input_field, sending_queue):
     text = input_field.get()
 
     if text:
@@ -41,7 +41,7 @@ async def draw(sending_queue):
 
     send_button = tk.Button(root_frame, font='arial 14', height=1)
     send_button['text'] = 'Register'
-    send_button['command'] = lambda: process_new_message(input_field, sending_queue)
+    send_button['command'] = lambda: process_nickname(input_field, sending_queue)
     send_button.pack(side='top', ipady=10, pady=10)
 
     await update_tk(root_frame)
