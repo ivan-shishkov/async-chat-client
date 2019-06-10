@@ -11,6 +11,10 @@ import gui_chat_registrator as gui
 from utils import create_handy_nursery
 
 
+class UserSuccessfullyRegistered(Exception):
+    pass
+
+
 def get_sanitized_text(text):
     return text.replace('\n', '')
 
@@ -66,7 +70,7 @@ async def run_chat_registrator(
                 title='Successfully registered',
                 message=f'Your credentials saved to {user_credentials_output_filepath}',
             )
-            raise gui.TkAppClosed()
+            raise UserSuccessfullyRegistered()
 
         except socket.gaierror:
             messagebox.showerror(
@@ -127,5 +131,5 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(main())
-    except (KeyboardInterrupt, gui.TkAppClosed):
+    except (KeyboardInterrupt, gui.TkAppClosed, UserSuccessfullyRegistered):
         pass
