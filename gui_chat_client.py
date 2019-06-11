@@ -108,6 +108,27 @@ def create_status_panel(root_frame):
     return nickname_label, status_read_label, status_write_label
 
 
+def get_window_size(window):
+    geometry_info = window.geometry().split('+')
+    size_info = geometry_info[0].split('x')
+    window_width = int(size_info[0])
+    window_height = int(size_info[1])
+
+    return window_width, window_height
+
+
+def set_window_to_center_screen(window):
+    window_width, window_height = get_window_size(window)
+
+    screen_width = window.winfo_screenwidth()
+    screen_height = window.winfo_screenheight()
+
+    window.geometry(
+        f'+{screen_width // 2 - window_width // 2}'
+        f'+{screen_height // 2 - window_height // 2}',
+    )
+
+
 async def draw(messages_queue, sending_queue, status_updates_queue):
     root = tk.Tk()
 
@@ -136,6 +157,10 @@ async def draw(messages_queue, sending_queue, status_updates_queue):
 
     conversation_panel = ScrolledText(root_frame, wrap='none')
     conversation_panel.pack(side='top', fill='both', expand=True)
+
+    root.update_idletasks()
+
+    set_window_to_center_screen(root)
 
     async with create_handy_nursery() as nursery:
         nursery.start_soon(
