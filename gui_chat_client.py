@@ -33,11 +33,11 @@ class NicknameReceived:
         self.nickname = nickname
 
 
-def process_new_message(input_field, sending_queue):
+def process_new_message(input_field, messages_queue):
     text = input_field.get()
 
     if text:
-        sending_queue.put_nowait(text)
+        messages_queue.put_nowait(text)
         input_field.delete(0, tk.END)
 
 

@@ -5,12 +5,11 @@ import tkinter as tk
 class TkAppClosed(Exception):
     pass
 
-
-def process_nickname(input_field, sending_queue):
+def process_nickname(input_field, messages_queue):
     text = input_field.get()
 
     if text:
-        sending_queue.put_nowait(text)
+        messages_queue.put_nowait(text)
         input_field.delete(0, tk.END)
 
 
