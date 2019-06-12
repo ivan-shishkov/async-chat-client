@@ -33,7 +33,7 @@ class NicknameReceived:
         self.nickname = nickname
 
 
-def process_new_message(input_field, messages_queue):
+def add_message_to_queue(input_field, messages_queue):
     text = input_field.get()
 
     if text:
@@ -147,12 +147,12 @@ async def draw(messages_queue, sending_queue, status_updates_queue):
 
     input_field.bind(
         '<Return>',
-        lambda event: process_new_message(input_field, sending_queue),
+        lambda event: add_message_to_queue(input_field, sending_queue),
     )
 
     send_button = tk.Button(input_frame)
     send_button['text'] = 'Send'
-    send_button['command'] = lambda: process_new_message(input_field, sending_queue)
+    send_button['command'] = lambda: add_message_to_queue(input_field, sending_queue)
     send_button.pack(side='left')
 
     conversation_panel = ScrolledText(root_frame, wrap='none')

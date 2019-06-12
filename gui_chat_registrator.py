@@ -5,7 +5,7 @@ import tkinter as tk
 class TkAppClosed(Exception):
     pass
 
-def process_nickname(input_field, messages_queue):
+def add_message_to_queue(input_field, messages_queue):
     text = input_field.get()
 
     if text:
@@ -63,7 +63,7 @@ async def draw(nickname_queue):
 
     send_button = tk.Button(root_frame, font='arial 14', height=1)
     send_button['text'] = 'Register'
-    send_button['command'] = lambda: process_nickname(input_field, nickname_queue)
+    send_button['command'] = lambda: add_message_to_queue(input_field, nickname_queue)
     send_button.pack(side='top', ipady=10, pady=10)
 
     root.update_idletasks()
