@@ -9,15 +9,11 @@ from aiofile import AIOFile, Writer
 
 import gui_chat_registrator as gui
 from gui_common import TkAppClosed
-from utils import create_handy_nursery
+from utils import create_handy_nursery, get_sanitized_text
 
 
 class UserSuccessfullyRegistered(Exception):
     pass
-
-
-def get_sanitized_text(text):
-    return text.replace('\n', '')
 
 
 async def register(reader, writer, nickname):

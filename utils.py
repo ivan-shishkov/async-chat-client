@@ -12,3 +12,7 @@ async def create_handy_nursery():
         if len(e.exceptions) == 1:
             raise e.exceptions[0]
         raise
+
+
+def get_sanitized_text(text):
+    return text.replace('\n', '')

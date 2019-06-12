@@ -14,7 +14,7 @@ import configargparse
 
 import gui_chat_client as gui
 from gui_common import TkAppClosed
-from utils import create_handy_nursery
+from utils import create_handy_nursery, get_sanitized_text
 
 
 class InvalidToken(Exception):
@@ -114,10 +114,6 @@ async def send_message(reader, writer, message, watchdog_messages_queue):
     successfully_sent_message = await reader.readline()
     logging.debug(f'Received: {successfully_sent_message.decode().strip()}')
     watchdog_messages_queue.put_nowait('Message sent')
-
-
-def get_sanitized_text(text):
-    return text.replace('\n', '')
 
 
 async def send_empty_messages(
