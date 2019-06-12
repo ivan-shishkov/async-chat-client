@@ -8,6 +8,7 @@ import configargparse
 from aiofile import AIOFile, Writer
 
 import gui_chat_registrator as gui
+from gui_common import TkAppClosed
 from utils import create_handy_nursery
 
 
@@ -139,5 +140,5 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(main())
-    except (KeyboardInterrupt, gui.TkAppClosed, UserSuccessfullyRegistered):
+    except (KeyboardInterrupt, TkAppClosed, UserSuccessfullyRegistered):
         pass

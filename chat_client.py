@@ -13,6 +13,7 @@ from aionursery import MultiError
 import configargparse
 
 import gui_chat_client as gui
+from gui_common import TkAppClosed
 from utils import create_handy_nursery
 
 
@@ -335,5 +336,5 @@ if __name__ == '__main__':
     except InvalidToken:
         messagebox.showerror('Invalid token', 'Unknown token. Check it')
         sys.exit(1)
-    except (KeyboardInterrupt, gui.TkAppClosed):
+    except (KeyboardInterrupt, TkAppClosed):
         pass
