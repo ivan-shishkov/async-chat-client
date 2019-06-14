@@ -1,6 +1,5 @@
 import asyncio
 import socket
-import logging
 import json
 from tkinter import messagebox
 
@@ -18,19 +17,14 @@ class UserSuccessfullyRegistered(Exception):
 
 async def register(reader, writer, nickname):
     greeting_message = await reader.readline()
-    logging.debug(f'Received: {greeting_message.decode().strip()}')
 
     writer.write('\n'.encode())
-    logging.debug('Sent: empty line')
 
     enter_nickname_message = await reader.readline()
-    logging.debug(f'Received: {enter_nickname_message.decode().strip()}')
 
     writer.write(f'{get_sanitized_text(nickname)}\n'.encode())
-    logging.debug(f'Sent: {nickname}')
 
     user_credentials_message = await reader.readline()
-    logging.debug(f'Received: {user_credentials_message.decode().strip()}')
 
     return json.loads(user_credentials_message.decode())
 
@@ -113,8 +107,6 @@ async def main():
     user_credentials_output_filepath = command_line_arguments.output
 
     nickname_queue = asyncio.Queue()
-
-    logging.basicConfig(level=logging.DEBUG)
 
     async with create_handy_nursery() as nursery:
         nursery.start_soon(
