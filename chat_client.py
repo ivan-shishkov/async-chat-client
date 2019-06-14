@@ -83,14 +83,11 @@ async def run_chat_reader(
 
 async def authorise(reader, writer, auth_token, watchdog_messages_queue):
     greeting_message = await reader.readline()
-    logging.debug(f'Received: {greeting_message.decode().strip()}')
     watchdog_messages_queue.put_nowait('Prompt before auth')
 
     writer.write(f'{auth_token}\n'.encode())
-    logging.debug(f'Sent: {auth_token}')
 
     user_credentials_message = await reader.readline()
-    logging.debug(f'Received: {user_credentials_message.decode().strip()}')
     watchdog_messages_queue.put_nowait('Authorisation done')
 
     user_credentials = json.loads(user_credentials_message.decode())
@@ -99,7 +96,6 @@ async def authorise(reader, writer, auth_token, watchdog_messages_queue):
         return None
 
     welcome_to_chat_message = await reader.readline()
-    logging.debug(f'Received: {welcome_to_chat_message.decode().strip()}')
     watchdog_messages_queue.put_nowait('Welcome to chat message received')
 
     return user_credentials
@@ -109,10 +105,8 @@ async def send_message(reader, writer, message, watchdog_messages_queue):
     sending_message = f'{get_sanitized_text(message)}\n\n' if message else '\n'
 
     writer.write(sending_message.encode())
-    logging.debug(f'Sent: {message}')
 
     successfully_sent_message = await reader.readline()
-    logging.debug(f'Received: {successfully_sent_message.decode().strip()}')
     watchdog_messages_queue.put_nowait('Message sent')
 
 
@@ -283,8 +277,6 @@ async def main():
     chat_auth_token = command_line_arguments.token
     output_filepath = command_line_arguments.output
 
-    logging.basicConfig(level=logging.DEBUG)
-
     if not chat_auth_token:
         sys.exit('Auth token not given')
 
@@ -294,7 +286,7 @@ async def main():
     status_updates_queue = asyncio.Queue()
 
     watchdog_logger = logging.getLogger('watchdog')
-    watchdog_logger.setLevel(level=logging.DEBUG)
+    watchdog_logger.setLevel(level=logging.INFO)
 
     async with create_handy_nursery() as nursery:
         nursery.start_soon(
