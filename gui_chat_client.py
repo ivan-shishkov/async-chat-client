@@ -6,6 +6,9 @@ from gui_common import add_message_to_queue, update_tk, set_window_to_center_scr
 from utils import create_handy_nursery
 
 
+enable_text_autoscrolling = True
+
+
 class ReadConnectionStateChanged(Enum):
     INITIATED = 'connection establishment...'
     ESTABLISHED = 'connection established'
@@ -29,6 +32,16 @@ class NicknameReceived:
         self.nickname = nickname
 
 
+def disable_autoscrolling(event):
+    global enable_text_autoscrolling
+    enable_text_autoscrolling = False
+
+
+def enable_autoscrolling(event):
+    global enable_text_autoscrolling
+    enable_text_autoscrolling = True
+
+
 async def update_conversation_history(panel, messages_queue):
     while True:
         msg = await messages_queue.get()
@@ -37,11 +50,9 @@ async def update_conversation_history(panel, messages_queue):
         if panel.index('end-1c') != '1.0':
             panel.insert('end', '\n')
         panel.insert('end', msg)
-        # TODO make scrolling smart,
-        #  so as not to interfere with viewing message history
-        # ScrolledText.frame
-        # ScrolledText.vbar
-        panel.yview(tk.END)
+
+        if enable_text_autoscrolling:
+            panel.yview(tk.END)
         panel['state'] = 'disabled'
 
 
@@ -114,6 +125,8 @@ async def draw(messages_queue, sending_queue, status_updates_queue):
 
     conversation_panel = ScrolledText(root_frame, wrap='none')
     conversation_panel.pack(side='top', fill='both', expand=True)
+    conversation_panel.vbar.bind('<ButtonPress-1>', disable_autoscrolling)
+    conversation_panel.vbar.bind('<ButtonRelease-1>', enable_autoscrolling)
 
     root.update_idletasks()
 
