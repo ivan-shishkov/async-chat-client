@@ -17,6 +17,9 @@ from gui_common import TkAppClosed
 from utils import create_handy_nursery, get_sanitized_text
 
 
+watchdog_logger = logging.getLogger('watchdog')
+
+
 class InvalidToken(Exception):
     pass
 
@@ -41,7 +44,7 @@ async def save_messages(output_filepath, messages_queue):
 
 
 async def watch_for_connection(
-        watchdog_messages_queue, watchdog_logger, max_pending_time_between_messages=4):
+        watchdog_messages_queue, max_pending_time_between_messages=4):
     while True:
         try:
             async with timeout(max_pending_time_between_messages) as timeout_manager:
@@ -225,7 +228,7 @@ def get_command_line_arguments():
 async def handle_connection(
         host, read_port, write_port, auth_token, displayed_messages_queue,
         written_to_file_messages_queue, sending_messages_queue,
-        status_updates_queue, watchdog_logger, timeout_between_connection_attempts=2):
+        status_updates_queue, timeout_between_connection_attempts=2):
     watchdog_messages_queue = asyncio.Queue()
 
     while True:
@@ -254,7 +257,6 @@ async def handle_connection(
                 nursery.start_soon(
                     watch_for_connection(
                         watchdog_messages_queue=watchdog_messages_queue,
-                        watchdog_logger=watchdog_logger,
                     ),
                 )
             return
@@ -285,8 +287,11 @@ async def main():
     sending_messages_queue = asyncio.Queue()
     status_updates_queue = asyncio.Queue()
 
-    watchdog_logger = logging.getLogger('watchdog')
     watchdog_logger.setLevel(level=logging.INFO)
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(level=logging.INFO)
+    console_handler.setFormatter(logging.Formatter('%(name)s:%(levelname)s:%(message)s'))
+    watchdog_logger.addHandler(console_handler)
 
     async with create_handy_nursery() as nursery:
         nursery.start_soon(
@@ -299,7 +304,6 @@ async def main():
                 written_to_file_messages_queue=written_to_file_messages_queue,
                 sending_messages_queue=sending_messages_queue,
                 status_updates_queue=status_updates_queue,
-                watchdog_logger=watchdog_logger,
             ),
         )
         nursery.start_soon(
