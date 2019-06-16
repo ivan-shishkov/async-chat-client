@@ -10,3 +10,13 @@ Main features:
 * send chat messages
 * automatic reconnection in case of disconnection
 * writing chat messages to a text file
+
+## How to install
+
+For script to work, you need to install **Python 3.7** and then install all dependencies:
+
+```bash
+
+$ pip install -r requirements.txt
+
+```
