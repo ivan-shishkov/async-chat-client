@@ -59,3 +59,52 @@ $ python chat_registrator.py
 
 In the window that appears, you must enter your preferred nickname and click on the "Register" button. 
 After successful registration, the token for authorization will be saved in a text file.
+
+## Chat Client Module
+
+![Chat Client](screenshots/chat_client.jpg?raw=true "Chat Client")
+
+This module allows you to read and write messages in the chat with the pre-authorization of the user using the authorization token.
+
+### How to set up
+
+```bash
+
+$ python chat_client.py -h
+usage: chat_client.py [-h] --host HOST [--read-port READ_PORT]
+                      [--write-port WRITE_PORT] --token TOKEN
+                      [--output OUTPUT]
+
+If an arg is specified in more than one place, then commandline values
+override environment variables which override defaults.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --host HOST           Host for connect to chat. Required [env var:
+                        CHAT_HOST]
+  --read-port READ_PORT
+                        Port for connect to chat for reading messages.
+                        Default: 5000 [env var: CHAT_READ_PORT]
+  --write-port WRITE_PORT
+                        Port for connect to chat for writing messages.
+                        Default: 5050 [env var: CHAT_WRITE_PORT]
+  --token TOKEN         User token for authorisation in chat. [env var:
+                        CHAT_AUTH_TOKEN]
+  --output OUTPUT       Filepath for save chat messages. Default: chat.txt
+                        [env var: CHAT_MESSAGES_OUTPUT_FILEPATH]
+
+```
+
+### How to launch
+
+```bash
+
+$ export CHAT_HOST='your.chat.host'
+$ export CHAT_AUTH_TOKEN='your_auth_token'
+$ python chat_client.py
+
+```
+
+# Project Goals
+
+The code is written for educational purposes - this is a lesson in the course on Python and web development on the site [Devman](https://dvmn.org).
