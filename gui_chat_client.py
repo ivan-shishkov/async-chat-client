@@ -125,8 +125,8 @@ async def draw(messages_queue, sending_queue, status_updates_queue):
 
     conversation_panel = ScrolledText(root_frame, wrap='none')
     conversation_panel.pack(side='top', fill='both', expand=True)
-    conversation_panel.vbar.bind('<ButtonPress-1>', disable_autoscrolling)
-    conversation_panel.vbar.bind('<ButtonRelease-1>', enable_autoscrolling)
+    conversation_panel.vbar.bind('<Enter>', disable_autoscrolling)
+    conversation_panel.vbar.bind('<Leave>', enable_autoscrolling)
 
     root.update_idletasks()
 
