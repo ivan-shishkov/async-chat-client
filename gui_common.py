@@ -6,7 +6,7 @@ class TkAppClosed(Exception):
     pass
 
 
-def add_message_to_queue(input_field, messages_queue):
+def move_message_to_queue(input_field, messages_queue):
     text = input_field.get()
 
     if text:
@@ -33,7 +33,7 @@ def get_window_size(window):
     return window_width, window_height
 
 
-def set_window_to_center_screen(window):
+def set_window_to_screen_center(window):
     window_width, window_height = get_window_size(window)
 
     screen_width = window.winfo_screenwidth()

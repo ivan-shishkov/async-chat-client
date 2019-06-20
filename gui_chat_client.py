@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter.scrolledtext import ScrolledText
 from enum import Enum
 
-from gui_common import add_message_to_queue, update_tk, set_window_to_center_screen
+from gui_common import move_message_to_queue, update_tk, set_window_to_screen_center
 from utils import create_handy_nursery
 
 
@@ -115,12 +115,12 @@ async def draw(messages_queue, sending_queue, status_updates_queue):
 
     input_field.bind(
         '<Return>',
-        lambda event: add_message_to_queue(input_field, sending_queue),
+        lambda event: move_message_to_queue(input_field, sending_queue),
     )
 
     send_button = tk.Button(input_frame)
     send_button['text'] = 'Send'
-    send_button['command'] = lambda: add_message_to_queue(input_field, sending_queue)
+    send_button['command'] = lambda: move_message_to_queue(input_field, sending_queue)
     send_button.pack(side='left')
 
     conversation_panel = ScrolledText(root_frame, wrap='none')
@@ -130,7 +130,7 @@ async def draw(messages_queue, sending_queue, status_updates_queue):
 
     root.update_idletasks()
 
-    set_window_to_center_screen(root)
+    set_window_to_screen_center(root)
 
     async with create_handy_nursery() as nursery:
         nursery.start_soon(
