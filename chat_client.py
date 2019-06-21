@@ -90,6 +90,7 @@ async def authorise(reader, writer, auth_token, watchdog_messages_queue):
     watchdog_messages_queue.put_nowait('Prompt before auth')
 
     writer.write(f'{auth_token}\n'.encode())
+    await writer.drain()
 
     user_credentials_message = await reader.readline()
     watchdog_messages_queue.put_nowait('Authorisation done')
@@ -109,6 +110,7 @@ async def send_message(reader, writer, message, watchdog_messages_queue):
     sending_message = f'{get_sanitized_text(message)}\n\n' if message else '\n'
 
     writer.write(sending_message.encode())
+    await writer.drain()
 
     successfully_sent_message = await reader.readline()
     watchdog_messages_queue.put_nowait('Message sent')

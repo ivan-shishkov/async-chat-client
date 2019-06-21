@@ -19,10 +19,12 @@ async def register(reader, writer, nickname):
     greeting_message = await reader.readline()
 
     writer.write('\n'.encode())
+    await writer.drain()
 
     enter_nickname_message = await reader.readline()
 
     writer.write(f'{get_sanitized_text(nickname)}\n'.encode())
+    await writer.drain()
 
     user_credentials_message = await reader.readline()
 
