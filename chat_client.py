@@ -65,13 +65,14 @@ async def watch_for_connection(
 
 async def run_chat_reader(
         host, port, displayed_messages_queue, written_to_file_messages_queue,
-        status_updates_queue, watchdog_messages_queue):
+        status_updates_queue, watchdog_messages_queue, successful_connection_info_queue):
     status_updates_queue.put_nowait(gui.ReadConnectionStateChanged.INITIATED)
 
     reader, writer = await asyncio.open_connection(host=host, port=port)
 
     try:
         status_updates_queue.put_nowait(gui.ReadConnectionStateChanged.ESTABLISHED)
+        successful_connection_info_queue.put_nowait(True)
 
         while True:
             message = await reader.readline()
@@ -142,13 +143,14 @@ async def send_messages(
 
 async def run_chat_writer(
         host, port, auth_token, sending_messages_queue, status_updates_queue,
-        watchdog_messages_queue):
+        watchdog_messages_queue, successful_connection_info_queue):
     status_updates_queue.put_nowait(gui.SendingConnectionStateChanged.INITIATED)
 
     reader, writer = await asyncio.open_connection(host=host, port=port)
 
     try:
         status_updates_queue.put_nowait(gui.SendingConnectionStateChanged.ESTABLISHED)
+        successful_connection_info_queue.put_nowait(True)
 
         user_credentials = await authorise(
             reader=reader,
@@ -228,11 +230,18 @@ def get_command_line_arguments():
 async def handle_connection(
         host, read_port, write_port, auth_token, displayed_messages_queue,
         written_to_file_messages_queue, sending_messages_queue,
-        status_updates_queue, timeout_between_connection_attempts=2):
+        status_updates_queue, connection_attempts_count_without_timeout=2,
+        timeout_between_connection_attempts=2):
     watchdog_messages_queue = asyncio.Queue()
+    chat_reader_successful_connection_info_queue = asyncio.Queue()
+    chat_writer_successful_connection_info_queue = asyncio.Queue()
+
+    current_connection_attempt = 0
 
     while True:
         try:
+            current_connection_attempt += 1
+
             async with create_handy_nursery() as nursery:
                 nursery.start_soon(
                     run_chat_reader(
@@ -242,6 +251,7 @@ async def handle_connection(
                         written_to_file_messages_queue=written_to_file_messages_queue,
                         status_updates_queue=status_updates_queue,
                         watchdog_messages_queue=watchdog_messages_queue,
+                        successful_connection_info_queue=chat_reader_successful_connection_info_queue,
                     ),
                 )
                 nursery.start_soon(
@@ -252,6 +262,7 @@ async def handle_connection(
                         sending_messages_queue=sending_messages_queue,
                         status_updates_queue=status_updates_queue,
                         watchdog_messages_queue=watchdog_messages_queue,
+                        successful_connection_info_queue=chat_writer_successful_connection_info_queue,
                     ),
                 )
                 nursery.start_soon(
@@ -267,7 +278,18 @@ async def handle_connection(
         except (ConnectionError, socket.gaierror):
             pass
 
-        await asyncio.sleep(timeout_between_connection_attempts)
+        if (not chat_reader_successful_connection_info_queue.empty() and
+                not chat_writer_successful_connection_info_queue.empty()):
+            current_connection_attempt = 0
+
+        if not chat_reader_successful_connection_info_queue.empty():
+            chat_reader_successful_connection_info_queue.get_nowait()
+
+        if not chat_writer_successful_connection_info_queue.empty():
+            chat_writer_successful_connection_info_queue.get_nowait()
+
+        if current_connection_attempt >= connection_attempts_count_without_timeout:
+            await asyncio.sleep(timeout_between_connection_attempts)
 
 
 async def main():
