@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import logging
 import json
+import os.path
 import sys
 import socket
 import time
@@ -22,6 +23,14 @@ watchdog_logger = logging.getLogger('watchdog')
 
 class InvalidToken(Exception):
     pass
+
+
+async def load_json_data(filepath):
+    if not os.path.exists(filepath):
+        return None
+
+    async with AIOFile(filepath) as file_object:
+        return json.loads(await file_object.read())
 
 
 def add_datetime_info(text):
@@ -213,11 +222,19 @@ def get_command_line_arguments():
         default=5050,
     )
     parser.add_argument(
+        '--credentials',
+        help='Path to the file with user credentials. Default: user_credentials.json',
+        env_var='USER_CREDENTIALS_FILEPATH',
+        type=str,
+        default='user_credentials.json',
+    )
+    parser.add_argument(
         '--token',
-        help='User token for authorisation in chat.',
+        help='User token for authorisation in chat. '
+             'If given, then auth token from file with user credentials will be ignored',
         env_var='CHAT_AUTH_TOKEN',
         type=str,
-        required=True,
+        default='',
     )
     parser.add_argument(
         '--output',
@@ -300,11 +317,17 @@ async def main():
     chat_host = command_line_arguments.host
     chat_read_port = command_line_arguments.read_port
     chat_write_port = command_line_arguments.write_port
+    user_credentials_filepath = command_line_arguments.credentials
     chat_auth_token = command_line_arguments.token
     output_filepath = command_line_arguments.output
 
     if not chat_auth_token:
-        sys.exit('Auth token not given')
+        user_credentials = await load_json_data(user_credentials_filepath)
+
+        if not user_credentials:
+            sys.exit('Auth token not given')
+
+        chat_auth_token = user_credentials['account_hash']
 
     displayed_messages_queue = asyncio.Queue()
     written_to_file_messages_queue = asyncio.Queue()
