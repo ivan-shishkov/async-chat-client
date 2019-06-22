@@ -60,7 +60,8 @@ async def run_chat_registrator(
             )
             messagebox.showinfo(
                 title='Successfully registered',
-                message=f'Your credentials saved to {user_credentials_output_filepath}',
+                message=f'Registered nickname: {user_credentials["nickname"]}\n'
+                        f'Your credentials saved to {user_credentials_output_filepath}',
             )
             raise UserSuccessfullyRegistered()
 
