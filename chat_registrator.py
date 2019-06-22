@@ -4,7 +4,7 @@ import json
 from tkinter import messagebox
 
 import configargparse
-from aiofile import AIOFile, Writer
+from aiofile import AIOFile
 
 import gui_chat_registrator as gui
 from gui_common import TkAppClosed
@@ -33,10 +33,7 @@ async def register(reader, writer, nickname):
 
 async def save_user_credentials(user_credentials, output_filepath):
     async with AIOFile(output_filepath, 'w') as file_object:
-        writer = Writer(file_object)
-
-        await writer(f'Your chat nickname: {user_credentials["nickname"]}\n')
-        await writer(f'Your auth token: {user_credentials["account_hash"]}\n')
+        await file_object.write(json.dumps(user_credentials))
 
 
 async def run_chat_registrator(
@@ -94,10 +91,10 @@ def get_command_line_arguments():
     )
     parser.add_argument(
         '--output',
-        help='Filepath for save user credentials. Default: user_credentials.txt',
-        env_var='USER_CREDENTIALS_OUTPUT_FILEPATH',
+        help='Filepath for save user credentials. Default: user_credentials.json',
+        env_var='USER_CREDENTIALS_FILEPATH',
         type=str,
-        default='user_credentials.txt',
+        default='user_credentials.json',
     )
     return parser.parse_args()
 
