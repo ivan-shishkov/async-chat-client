@@ -135,11 +135,19 @@ async def draw(messages_queue, sending_queue, status_updates_queue):
 
     async with create_handy_nursery() as nursery:
         nursery.start_soon(
-            update_tk(root_frame),
+            update_tk(
+                root_frame=root_frame,
+            ),
         )
         nursery.start_soon(
-            update_conversation_history(conversation_panel, messages_queue),
+            update_conversation_history(
+                panel=conversation_panel,
+                messages_queue=messages_queue,
+            ),
         )
         nursery.start_soon(
-            update_status_panel(status_labels, status_updates_queue),
+            update_status_panel(
+                status_labels=status_labels,
+                status_updates_queue=status_updates_queue,
+            ),
         )
