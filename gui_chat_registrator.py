@@ -1,9 +1,23 @@
 import tkinter as tk
 
-from gui_common import move_message_to_queue, update_tk, set_window_to_screen_center
+from gui_common import update_tk, set_window_to_screen_center
+from utils import create_handy_nursery
 
 
-async def draw(nickname_queue):
+def handle_register_button_click(button, nickname_input_field, nickname_queue):
+    nickname = nickname_input_field.get()
+
+    if nickname:
+        nickname_queue.put_nowait(nickname)
+        button['state'] = 'disabled'
+
+
+async def handle_button_state(button, button_state_queue):
+    while True:
+        button['state'] = await button_state_queue.get()
+
+
+async def draw(nickname_queue, register_button_state_queue):
     root = tk.Tk()
 
     root.title('Minecraft Chat Registrator')
@@ -17,16 +31,31 @@ async def draw(nickname_queue):
     info_label.pack(side='top', fill=tk.X, padx=10)
     info_label['text'] = 'Enter preferred nickname:'
 
-    input_field = tk.Entry(root_frame, font='arial 18')
-    input_field.pack(side='top', fill=tk.X, expand=True, padx=10)
+    nickname_input_field = tk.Entry(root_frame, font='arial 18')
+    nickname_input_field.pack(side='top', fill=tk.X, expand=True, padx=10)
 
-    send_button = tk.Button(root_frame, font='arial 14', height=1)
-    send_button['text'] = 'Register'
-    send_button['command'] = lambda: move_message_to_queue(input_field, nickname_queue)
-    send_button.pack(side='top', ipady=10, pady=10)
+    register_button = tk.Button(root_frame, font='arial 14', height=1)
+    register_button['text'] = 'Register'
+    register_button['command'] = lambda: handle_register_button_click(
+        button=register_button,
+        nickname_input_field=nickname_input_field,
+        nickname_queue=nickname_queue,
+    )
+    register_button.pack(side='top', ipady=10, pady=10)
 
     root.update_idletasks()
 
     set_window_to_screen_center(root)
 
-    await update_tk(root_frame)
+    async with create_handy_nursery() as nursery:
+        nursery.start_soon(
+            update_tk(
+                root_frame=root_frame,
+            ),
+        )
+        nursery.start_soon(
+            handle_button_state(
+                button=register_button,
+                button_state_queue=register_button_state_queue,
+            )
+        )

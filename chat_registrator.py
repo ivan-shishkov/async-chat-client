@@ -37,7 +37,8 @@ async def save_user_credentials(user_credentials, output_filepath):
 
 
 async def run_chat_registrator(
-        host, port, nickname_queue, user_credentials_output_filepath):
+        host, port, nickname_queue, register_button_state_queue,
+        user_credentials_output_filepath):
     writer = None
 
     while True:
@@ -67,6 +68,7 @@ async def run_chat_registrator(
                 title='Connection error',
                 message='Could not connect to server. Check your internet connection',
             )
+            register_button_state_queue.put_nowait('normal')
         finally:
             if writer:
                 writer.close()
@@ -107,11 +109,13 @@ async def main():
     user_credentials_output_filepath = command_line_arguments.output
 
     nickname_queue = asyncio.Queue()
+    register_button_state_queue = asyncio.Queue()
 
     async with create_handy_nursery() as nursery:
         nursery.start_soon(
             gui.draw(
                 nickname_queue=nickname_queue,
+                register_button_state_queue=register_button_state_queue,
             ),
         )
         nursery.start_soon(
@@ -119,6 +123,7 @@ async def main():
                 host=chat_host,
                 port=chat_port,
                 nickname_queue=nickname_queue,
+                register_button_state_queue=register_button_state_queue,
                 user_credentials_output_filepath=user_credentials_output_filepath,
             )
         )
