@@ -5,6 +5,7 @@ from tkinter import messagebox
 
 import configargparse
 from aiofile import AIOFile
+from async_timeout import timeout
 
 import gui_chat_registrator as gui
 from gui_common import TkAppClosed
@@ -12,6 +13,10 @@ from utils import create_handy_nursery, get_sanitized_text
 
 
 class UserSuccessfullyRegistered(Exception):
+    pass
+
+
+class UserRegistrationPendingTimeElapsed(Exception):
     pass
 
 
@@ -36,6 +41,23 @@ async def save_user_credentials(user_credentials, output_filepath):
         await file_object.write(json.dumps(user_credentials))
 
 
+async def execute_user_registration(
+        reader, writer, nickname, max_pending_time_of_user_registration=2):
+    try:
+        async with timeout(max_pending_time_of_user_registration) as timeout_manager:
+            user_credentials = await register(
+                reader=reader,
+                writer=writer,
+                nickname=nickname,
+            )
+        return user_credentials
+
+    except asyncio.TimeoutError:
+        if not timeout_manager.expired:
+            raise
+        raise UserRegistrationPendingTimeElapsed()
+
+
 async def run_chat_registrator(
         host, port, nickname_queue, register_button_state_queue,
         user_credentials_output_filepath):
@@ -47,7 +69,7 @@ async def run_chat_registrator(
 
             reader, writer = await asyncio.open_connection(host=host, port=port)
 
-            user_credentials = await register(
+            user_credentials = await execute_user_registration(
                 reader=reader,
                 writer=writer,
                 nickname=nickname,
@@ -68,10 +90,15 @@ async def run_chat_registrator(
                 title='Connection error',
                 message='Could not connect to server. Check your internet connection',
             )
-            register_button_state_queue.put_nowait('normal')
+        except UserRegistrationPendingTimeElapsed:
+            messagebox.showerror(
+                title='Registration pending time elapsed',
+                message='User registration pending time elapsed. Try to register again',
+            )
         finally:
             if writer:
                 writer.close()
+            register_button_state_queue.put_nowait('normal')
 
 
 def get_command_line_arguments():
